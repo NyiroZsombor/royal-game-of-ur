@@ -1,0 +1,311 @@
+import math
+import time
+import pygame as pg
+from consts import *
+
+
+class Draw:
+
+    def draw_loading(self):
+        self.bg_img.fill(0)
+        text = self.font.render(f"Loading{'.' * (int(time.time() * 2) % 4)}", True, "white")
+        self.bg_img.blit(text, (
+            self.width // 2 - text.get_width() // 2,
+            self.height // 2 - text.get_height() // 2
+        ))
+
+
+    def load_assets(self):
+        self.bg_img = pg.image.load("assets/bg.jpg")
+        self.bg_img.convert()
+
+        self.board_img = pg.image.load("assets/board.png")
+        self.board_img.convert_alpha()
+
+        self.arrows = pg.image.load("assets/arrows.png")
+        self.arrows.convert_alpha()
+
+        # arrow_types = ["start", "middle", "bend", "end"]
+        # directions = ["north", "east", "south", "west"]
+        # self.arrows = dict.fromkeys(arrow_types, dict.fromkeys(directions))
+        
+        # arrows_surf = pg.surface.Surface((256, 256), flags=pg.SRCALPHA)
+
+        # for t in arrow_types:
+        #     for d in directions:
+        #         img = pg.image.load(f"assets/arrows/arrow-{t}-{d}.png")
+        #         img.convert_alpha()
+        #         self.arrows[t][d] = img
+        #         arrows_surf.blit(self.arrows[t][d],(
+        #             arrow_types.index(t) * 64,
+        #             directions.index(d) * 64,
+        #         ))
+                
+        # pg.image.save(arrows_surf, "arrows.png")
+
+
+    def render_score(self):
+        self.bg_img.fill((192, 160, 128), (0, 0, *self.bg_img.get_size()), pg.BLEND_MULT)
+        score_text = self.font.render("Score", True, "white")
+        self.score_pos = (
+            self.width // 2 - score_text.get_width() // 2,
+            self.tile_size // 2
+        )
+
+        rect = (0, self.score_pos[1], self.width, score_text.get_height())
+        dark = pg.surface.Surface(rect[2:4])
+        dark.fill((128, 128, 128))
+        self.bg_img.blit(dark, rect[0:2], special_flags=pg.BLEND_MULT)
+        self.bg_img.blit(score_text, self.score_pos)
+
+
+    def render_player_labels(self):
+        self.you_text = self.font.render("You", True, "white")
+        self.opponent_text = self.font.render("Them", True, "white")
+
+        self.highlight_you_text = self.you_text.copy()
+        self.highlight_opponent_text = self.opponent_text.copy()
+        self.highlight_you_text.fill(
+            0xAAFF44, special_flags=pg.BLEND_MULT
+        )
+        self.highlight_opponent_text.fill(
+            0xAAFF44, special_flags=pg.BLEND_MULT
+        )
+
+
+    def blit_player_labels(self):
+        you_size = self.you_text.get_size()
+        opponent_size = self.opponent_text.get_size()
+
+        center = (self.width // 6, self.tile_size * 2)
+
+        self.you_pos = (
+            center[0] - you_size[0] // 2,
+            self.height - center[1] - you_size[1] // 2
+        )
+        self.opponent_pos = (
+            self.width - center[0] - opponent_size[0] // 2,
+            self.height - center[1] - opponent_size[1] // 2
+        )
+
+        if self.color == DARK:
+            self.you_pos = (
+                self.width - self.you_pos[0] - you_size[0], self.you_pos[1]
+            )
+            self.opponent_pos = (
+                self.width - self.opponent_pos[0] - opponent_size[0], self.opponent_pos[1]
+            )
+
+        self.bg_img.blit(self.you_text, self.you_pos)
+        self.bg_img.blit(self.opponent_text, self.opponent_pos)
+
+
+    def render_bg(self):
+        self.render_score()
+        self.render_player_labels()
+        self.blit_player_labels()
+        
+        finish_text = self.font.render("Done", True, "white")
+        finish_pos = (
+            self.finish_rect[0] + self.finish_rect[2] // 2 - finish_text.get_width() // 2,
+            self.finish_rect[1] + self.finish_rect[3] // 2 - finish_text.get_height() // 2
+        )
+        self.bg_img.blit(finish_text, finish_pos)
+
+
+    def draw_board(self):
+        # def draw_star(center):
+        #     def get_point(a, b, small):
+        #         angle = (b * 2 + a - small * 0.5) / nsides * math.pi + math.pi / nsides / 2
+        #         return self.tile_size / (3 * (small + 1)) * pg.Vector2(
+        #             math.cos(angle), math.sin(angle)
+        #         ) + center
+            
+        #     points = []
+        #     nsides = 4
+        #     ncolors = 2
+
+        #     for a in range(ncolors):
+        #         curr = []
+        #         for b in range(nsides):
+        #             curr.append(center)
+        #             curr.append(get_point(a, b, 1))
+        #             curr.append(get_point(a, b, 0))
+        #             curr.append(get_point(a + 1, b, 1))
+        #             curr.append(center)
+        #         points.append(curr)
+
+        #     pg.draw.polygon(self.board_surf, DARK_COLOR, points[0])
+        #     pg.draw.polygon(self.board_surf, LIGHT_COLOR, points[1])
+        #     pg.draw.polygon(self.board_surf, "black", points[0], width=2)
+        #     pg.draw.polygon(self.board_surf, "black", points[1], width=2)
+        
+        w = 3
+        h = 8
+        # self.board_surf.fill(0)
+        self.board_surf.blit(self.board_img, (0, 0))
+
+        for i in range(w):
+            for j in range(h):
+                curr_piece = self.board[i + j * w]
+                if curr_piece == OUTSIDE:
+                    continue
+
+                rect = (
+                    i * self.tile_size, j * self.tile_size,
+                    self.tile_size, self.tile_size
+                )
+                # pg.draw.rect(self.board_surf, 0xFFAA8844, rect)
+                # pg.draw.rect(self.board_surf, 0xFF887722, rect, width=2)
+
+                center = pg.Vector2(
+                    int(rect[0] + rect[2] / 2),
+                    int(rect[1] + rect[3] / 2)
+                )
+
+                # if (i == 1 and j == 3) or (i in (0, 2) and j in (0, 6)):
+                #     draw_star(center)
+
+                if curr_piece == LIGHT:
+                    pg.draw.circle(self.board_surf, LIGHT_COLOR, center, self.piece_radius)
+                elif curr_piece == DARK:
+                    pg.draw.circle(self.board_surf, DARK_COLOR, center, self.piece_radius)
+
+
+    def draw_move(self):
+        if self.move is None or sum(self.dice) == 0: return
+        steps = self.get_next_steps()
+
+        for i in range(len(steps)):
+            idx = steps[i]
+            color = 1
+            x = int(((idx %  3)) * self.tile_size) + self.board_rect[0]
+            y = int(((idx // 3)) * self.tile_size) + self.board_rect[1]
+            
+            if i == len(steps) - 1:
+                diff = idx - steps[i - 1]
+                arrow_type = "end"
+            elif i == 0:
+                if self.move == -1:
+                    arrow_type = "middle"
+                else:
+                    arrow_type = "start"
+                diff = steps[i + 1] - idx
+            else:
+                diff1 = idx - steps[i - 1]
+                diff2 = steps[i + 1] - idx
+
+                if diff1 == diff2:
+                    arrow_type = "middle"
+                    diff = abs(diff1)
+
+                else:
+                    arrow_type = "bend"
+                    diff = diff2 if self.color == LIGHT else diff1
+                    if self.color == DARK:
+                        color = -1
+
+            if diff == ( 1 * color): d = "east"
+            elif diff == (-1 * color): d = "west"
+            elif diff == ( 3 * color): d = "south"
+            else: d = "north"
+
+            arrow_types = ["start", "middle", "bend", "end"]
+            directions = ["north", "east", "south", "west"]
+
+            dx = arrow_types.index(arrow_type) * self.tile_size
+            dy = directions.index(d) * self.tile_size
+
+            self.screen.blit(self.arrows, (x, y), (dx, dy, self.tile_size, self.tile_size))
+
+
+    def draw_die(self, x, y, lights: set):
+        r = self.piece_radius
+        points = [(
+            x + math.cos(i / 3 * math.tau) * r,
+            y + math.sin(i / 3 * math.tau) * r
+        ) for i in range(3)]
+        pg.draw.polygon(self.screen, DARK_COLOR, points)
+        for p in points:
+            pg.draw.line(self.screen, "black", (x, y), p, 2)
+
+        points.append((x, y))
+
+        for i in range(4):
+            if i in lights:
+                color = "white"
+            else:
+                color = "black"
+
+            pg.draw.circle(self.screen, color, points[i], self.piece_radius / 4)
+
+
+    def draw_dice(self):
+        for i in range(4):
+            if self.dice[i]:
+                dice_set = {3}
+            else:
+                dice_set = set()
+            
+            x = i % 2
+            y = i // 2
+            self.draw_die(
+                self.dice_rect[0] + self.dice_rect[2] * (x * 2 + 1) // 4,    
+                self.dice_rect[1] + self.dice_rect[3] * (y * 2 + 1) // 4,    
+            dice_set)
+
+
+    def draw_ui(self):
+        def draw_pieces(npieces, color, rect):
+            for i in range(npieces):
+                offset_x = self.piece_radius * (self.piece_spacing_factor * i + 1)
+                if color == LIGHT:
+                    x = rect[0] + offset_x
+                else:
+                    x = rect[0] + rect[2] - offset_x
+                col = LIGHT_COLOR if color == LIGHT else DARK_COLOR
+                pos = (x, rect[1] + self.piece_radius)
+                pg.draw.circle(
+                    self.screen, col, pos, self.piece_radius
+                )
+                pg.draw.circle(
+                    self.screen, "black", pos, self.piece_radius, width=2
+                )
+
+        draw_pieces(self.light_pieces, LIGHT, self.light_piece_rect)
+        draw_pieces(self.dark_pieces, DARK, self.dark_piece_rect)
+        # draw_pieces(self.light_score, LIGHT, self.tile_size // 3)
+        # draw_pieces(self.dark_score, DARK, self.tile_size // 3)
+        light_text = self.font.render(str(self.light_score), True, "white")
+        dark_text = self.font.render(str(self.dark_score), True, "white")
+
+        self.screen.blit(light_text, (
+            self.width // 4 - light_text.get_width() // 2,
+            self.score_pos[1]
+        ))
+        self.screen.blit(dark_text, (
+            self.width // 4 * 3 - dark_text.get_width() // 2,
+            self.score_pos[1]
+        ))
+
+        if int(time.time()) & 1:
+            if self.my_turn:
+                self.screen.blit(
+                    self.highlight_you_text,
+                    self.you_pos,
+                )
+            else:
+                self.screen.blit(
+                    self.highlight_opponent_text,
+                    self.opponent_pos,
+                )
+
+        self.draw_dice()
+        self.draw_move()
+
+
+    def draw_areas(self):
+        pg.draw.rect(self.screen, "red", self.dice_rect, 2)
+        pg.draw.rect(self.screen, "red", self.light_piece_rect, 2)
+        pg.draw.rect(self.screen, "red", self.dark_piece_rect, 2)
+        pg.draw.rect(self.screen, "red", self.finish_rect, 2)
