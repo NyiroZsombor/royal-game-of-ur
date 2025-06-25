@@ -161,6 +161,8 @@ class App(Draw, Client):
             end_square = steps[-1]
             star_tiles = (0, 2, 10, 18, 20)
             last_bit = b"1" if end_square in star_tiles else b"0"
+            self.move_sound.play()
+
 
             if self.move == -1:
                 if self.color == LIGHT:
@@ -190,7 +192,6 @@ class App(Draw, Client):
         elif move_exists:
             return
 
-        print(f"{self.move=}\t{move_exists=}")
         self.my_turn = False
         self.selected_tile = None
         self.has_rolled = False

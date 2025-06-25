@@ -4,6 +4,13 @@ from consts import *
 from random import randint
 
 
+def get_ip():
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as soc:
+        soc.connect(("10.255.255.255", 1))
+
+        return soc.getsockname()[0]
+
+
 def close_conn(clients):
     for c in clients:
         try:
@@ -73,11 +80,11 @@ n_sockets = 2
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     try:
         server.bind(("0.0.0.0", PORTS[0]))
-        print(f"server is listening on port {PORTS[0]}")
 
     except OSError:
         server.bind(("0.0.0.0", PORTS[1]))
-        print(f"server is listening on port {PORTS[1]}")
+
+    print(f"server is listening on ip {get_ip()}")
 
     server.listen(n_sockets)
     clients = []
@@ -88,8 +95,3 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         print(f"connected by {addr}")
 
     main_loop(clients)
-
-# server: move(data) -> client
-# client: roll -> server
-# server: roll -> clients
-# client: move(data) -> server

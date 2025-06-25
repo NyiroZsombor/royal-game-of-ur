@@ -17,31 +17,20 @@ class Draw:
 
     def load_assets(self):
         self.bg_img = pg.image.load("assets/bg.jpg")
-        self.bg_img.convert()
-
         self.board_img = pg.image.load("assets/board.png")
-        self.board_img.convert_alpha()
-
+        self.light_img = pg.image.load("assets/light.svg")
+        self.dark_img = pg.image.load("assets/dark.svg")
         self.arrows = pg.image.load("assets/arrows.png")
+        self.move_sound = pg.mixer.Sound("assets/move.wav")
+        self.roll_sound = pg.mixer.Sound("assets/roll.wav")
+
+        self.bg_img.convert()
+        self.board_img.convert_alpha()
+        self.light_img.convert_alpha()
+        self.dark_img.convert_alpha()
         self.arrows.convert_alpha()
-
-        # arrow_types = ["start", "middle", "bend", "end"]
-        # directions = ["north", "east", "south", "west"]
-        # self.arrows = dict.fromkeys(arrow_types, dict.fromkeys(directions))
-        
-        # arrows_surf = pg.surface.Surface((256, 256), flags=pg.SRCALPHA)
-
-        # for t in arrow_types:
-        #     for d in directions:
-        #         img = pg.image.load(f"assets/arrows/arrow-{t}-{d}.png")
-        #         img.convert_alpha()
-        #         self.arrows[t][d] = img
-        #         arrows_surf.blit(self.arrows[t][d],(
-        #             arrow_types.index(t) * 64,
-        #             directions.index(d) * 64,
-        #         ))
-                
-        # pg.image.save(arrows_surf, "arrows.png")
+        self.move_sound.set_volume(0.5)
+        self.roll_sound.set_volume(0.5)
 
 
     def render_score(self):
@@ -63,13 +52,15 @@ class Draw:
         self.you_text = self.font.render("You", True, "white")
         self.opponent_text = self.font.render("Them", True, "white")
 
+        color = 0x88FF22
+
         self.highlight_you_text = self.you_text.copy()
         self.highlight_opponent_text = self.opponent_text.copy()
         self.highlight_you_text.fill(
-            0xAAFF44, special_flags=pg.BLEND_MULT
+            color, special_flags=pg.BLEND_MULT
         )
         self.highlight_opponent_text.fill(
-            0xAAFF44, special_flags=pg.BLEND_MULT
+            color, special_flags=pg.BLEND_MULT
         )
 
 
@@ -114,35 +105,8 @@ class Draw:
 
 
     def draw_board(self):
-        # def draw_star(center):
-        #     def get_point(a, b, small):
-        #         angle = (b * 2 + a - small * 0.5) / nsides * math.pi + math.pi / nsides / 2
-        #         return self.tile_size / (3 * (small + 1)) * pg.Vector2(
-        #             math.cos(angle), math.sin(angle)
-        #         ) + center
-            
-        #     points = []
-        #     nsides = 4
-        #     ncolors = 2
-
-        #     for a in range(ncolors):
-        #         curr = []
-        #         for b in range(nsides):
-        #             curr.append(center)
-        #             curr.append(get_point(a, b, 1))
-        #             curr.append(get_point(a, b, 0))
-        #             curr.append(get_point(a + 1, b, 1))
-        #             curr.append(center)
-        #         points.append(curr)
-
-        #     pg.draw.polygon(self.board_surf, DARK_COLOR, points[0])
-        #     pg.draw.polygon(self.board_surf, LIGHT_COLOR, points[1])
-        #     pg.draw.polygon(self.board_surf, "black", points[0], width=2)
-        #     pg.draw.polygon(self.board_surf, "black", points[1], width=2)
-        
         w = 3
         h = 8
-        # self.board_surf.fill(0)
         self.board_surf.blit(self.board_img, (0, 0))
 
         for i in range(w):
@@ -151,25 +115,15 @@ class Draw:
                 if curr_piece == OUTSIDE:
                     continue
 
-                rect = (
-                    i * self.tile_size, j * self.tile_size,
-                    self.tile_size, self.tile_size
+                pos = (
+                    i * self.tile_size + self.tile_size // 2 - self.piece_radius,
+                    j * self.tile_size + self.tile_size // 2 - self.piece_radius,
                 )
-                # pg.draw.rect(self.board_surf, 0xFFAA8844, rect)
-                # pg.draw.rect(self.board_surf, 0xFF887722, rect, width=2)
-
-                center = pg.Vector2(
-                    int(rect[0] + rect[2] / 2),
-                    int(rect[1] + rect[3] / 2)
-                )
-
-                # if (i == 1 and j == 3) or (i in (0, 2) and j in (0, 6)):
-                #     draw_star(center)
 
                 if curr_piece == LIGHT:
-                    pg.draw.circle(self.board_surf, LIGHT_COLOR, center, self.piece_radius)
+                    self.board_surf.blit(self.light_img, pos)
                 elif curr_piece == DARK:
-                    pg.draw.circle(self.board_surf, DARK_COLOR, center, self.piece_radius)
+                    self.board_surf.blit(self.dark_img, pos)
 
 
     def draw_move(self):
@@ -258,19 +212,17 @@ class Draw:
     def draw_ui(self):
         def draw_pieces(npieces, color, rect):
             for i in range(npieces):
-                offset_x = self.piece_radius * (self.piece_spacing_factor * i + 1)
+                offset_x = self.piece_radius * (self.piece_spacing_factor * i)
                 if color == LIGHT:
                     x = rect[0] + offset_x
                 else:
-                    x = rect[0] + rect[2] - offset_x
-                col = LIGHT_COLOR if color == LIGHT else DARK_COLOR
-                pos = (x, rect[1] + self.piece_radius)
-                pg.draw.circle(
-                    self.screen, col, pos, self.piece_radius
-                )
-                pg.draw.circle(
-                    self.screen, "black", pos, self.piece_radius, width=2
-                )
+                    x = rect[0] + rect[2] - offset_x - self.dark_img.get_width()
+                pos = (x, rect[1])
+
+                if color == LIGHT:
+                    self.screen.blit(self.light_img, pos)
+                else:
+                    self.screen.blit(self.dark_img, pos)
 
         draw_pieces(self.light_pieces, LIGHT, self.light_piece_rect)
         draw_pieces(self.dark_pieces, DARK, self.dark_piece_rect)
@@ -288,7 +240,7 @@ class Draw:
             self.score_pos[1]
         ))
 
-        if int(time.time()) & 1:
+        if int(time.time() * 2) & 1:
             if self.my_turn:
                 self.screen.blit(
                     self.highlight_you_text,

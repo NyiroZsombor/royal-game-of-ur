@@ -73,12 +73,13 @@ class Client:
         print("#", msg)
 
         if msg.startswith(b"<move>"):
+            if not self.my_turn:
+                self.move_sound.play()
             if not self.decode_board(msg):
                 print("your turn")
                 self.my_turn = True
                 self.selected_tile = None
                 self.has_rolled = False
-
                 self.move = None
 
         elif msg.startswith(b"<dark>"):
@@ -97,6 +98,7 @@ class Client:
 
         elif msg.startswith(b"<roll>"):
             self.dice = tuple(map(int, msg.strip().split(b"|")[1:]))
+            self.roll_sound.play()
 
         else:
             print("???")
@@ -104,7 +106,6 @@ class Client:
 
     def decode_board(self, board):
         decoded = list(map(int, board.strip().split(b"|")[1].decode()))
-        print(decoded)
 
         self.light_pieces = decoded[0]
         self.dark_pieces = decoded[1]
