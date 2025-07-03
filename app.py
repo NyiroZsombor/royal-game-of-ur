@@ -17,24 +17,24 @@ class App(Draw, Client):
         self.screen = pg.display.set_mode(self.size)
         self.clock = pg.time.Clock()
         self.running = True
-        self.fps = 8
+        self.fps = 24
         # self.bg = 0x443322
 
         self.bg_img = pg.surface.Surface(self.size)
 
+        self.ready = False
         self.connected = False
-        threading.Thread(
-            target=self.init_client,
-            daemon=True,
-        ).start()
+        self.input_host = []
 
-
-    def init(self):
         self.init_board()
         self.init_rects()
         self.load_assets()
+        # self.render_bg()
+        # self.draw_board()
+
+
+    def post_init(self):
         self.render_bg()
-        self.draw_board()
         self.connected = True
 
 
@@ -86,6 +86,13 @@ class App(Draw, Client):
         self.finish_rect = (
             self.width - self.dice_rect[0] - self.dice_rect[2], *self.dice_rect[1:]
         )
+
+
+    def start_client(self):
+        threading.Thread(
+            target=self.init_client,
+            daemon=True,
+        ).start()
 
 
     def get_next_steps(self, start_square=None):
@@ -162,7 +169,6 @@ class App(Draw, Client):
             star_tiles = (0, 2, 10, 18, 20)
             last_bit = b"1" if end_square in star_tiles else b"0"
             self.move_sound.play()
-
 
             if self.move == -1:
                 if self.color == LIGHT:
@@ -249,7 +255,55 @@ class App(Draw, Client):
                         self.has_rolled = True
 
 
-    def mainloop(self):
+    def start(self):
+        self.connect_loop()
+        self.game_loop()
+
+        pg.quit()
+
+
+    def connect_loop(self):
+        deleting = -1
+        deleting_time = 0.33
+        while not self.connected and self.running:
+            while True:
+                try:
+                    self.handle_message(self.recv_queue.get(False))
+                except (queue.Empty, AttributeError):
+                    break
+
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    self.running = False
+
+                elif event.type == pg.KEYDOWN:
+                    if event.key == pg.K_BACKSPACE and len(self.input_host) > 0:
+                        deleting = 0
+                    elif event.key == pg.K_RETURN and not self.ready:
+                        self.start_client()
+                    elif len(self.input_host) < 16 and event.unicode in "0123456789.":
+                        self.input_host.append(event.unicode)
+                        print("".join(self.input_host))
+
+                elif event.type == pg.KEYUP:
+                    if event.key == pg.K_BACKSPACE:
+                        deleting = -1
+                        if deleting < deleting_time:
+                            if len(self.input_host) > 0: self.input_host.pop()
+
+            if deleting >= 0 and deleting < deleting_time:
+                deleting += 1 / self.fps
+            if deleting >= deleting_time:
+                if len(self.input_host) > 0: self.input_host.pop()
+
+            self.screen.blit(self.bg_img, (0, 0))
+            self.draw_loading()
+
+            pg.display.flip()
+            self.clock.tick(self.fps)
+
+
+    def game_loop(self):
         while self.running:
             while True:
                 try:
@@ -257,30 +311,20 @@ class App(Draw, Client):
                 except queue.Empty:
                     break
 
-            # self.screen.fill(self.bg)
-            if not self.connected:
-                for event in pg.event.get():
-                    if event.type == pg.QUIT:
-                        self.running = False
-
-                self.draw_loading()
-
             self.screen.blit(self.bg_img, (0, 0))
             
-            if self.connected:
-                for event in pg.event.get():
-                    self.handle_event(event)
+            for event in pg.event.get():
+                self.handle_event(event)
 
-                self.draw_board()
-                self.screen.blit(self.board_surf, self.board_rect)
-                self.draw_ui()
-                self.draw_areas()
+            self.draw_board()
+            self.screen.blit(self.board_surf, self.board_rect)
+            self.draw_ui()
+            self.draw_areas()
+
 
             pg.display.flip()
             self.clock.tick(self.fps)
 
-        pg.quit()
-
 
 if __name__ ==  "__main__":
-    App().mainloop()
+    App().start()

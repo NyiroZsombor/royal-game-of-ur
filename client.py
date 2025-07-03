@@ -12,11 +12,19 @@ class Client:
         self.recv_queue = queue.Queue()
 
         with open("local_ip.txt") as file:
-            host = file.read()
+            prev_ip = file.read()
 
-        host = input(f"ip [{host}]: ") or host
+        while True:
+            host = "".join(self.input_host)
+
+            try:
+                self.start_conn(host)
+                break
+            except ConnectionRefusedError:
+                print("connection refused")
 
 
+    def start_conn(self, host):
         print(f"connecting to {host}...")
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
@@ -26,7 +34,8 @@ class Client:
                 client.connect((host, PORTS[1]))
             except OSError:
                 print("all ports in use")
-                sys.exit()
+                self.running = False
+                return
             with open("local_ip.txt", "w") as file:
                 file.write(host)
 
@@ -43,7 +52,7 @@ class Client:
 
             send_thread.start()
             receive_thread.start()
-
+            self.ready = True
             send_thread.join()
             receive_thread.join()
             client.send(b"<exit>")
@@ -84,12 +93,12 @@ class Client:
 
         elif msg.startswith(b"<dark>"):
             self.color = DARK
-            self.init()
+            self.post_init()
             print("you are dark")
 
         elif msg.startswith(b"<light>"):
             self.color = LIGHT
-            self.init()
+            self.post_init()
             print("you are light")
 
         elif msg.startswith(b"<exit>"):

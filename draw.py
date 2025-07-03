@@ -7,16 +7,28 @@ from consts import *
 class Draw:
 
     def draw_loading(self):
-        self.bg_img.fill(0)
-        text = self.font.render(f"Loading{'.' * (int(time.time() * 2) % 4)}", True, "white")
-        self.bg_img.blit(text, (
-            self.width // 2 - text.get_width() // 2,
-            self.height // 2 - text.get_height() // 2
-        ))
+        ip_text = self.font.render("".join(("IP: ", *self.input_host)), True, "white")
+        x = self.width // 2 - ip_text.get_width() // 2
+        y = self.height * 3 // 8 - ip_text.get_height() // 2
+        self.screen.blit(ip_text, (x, y))
+        if (time.time() * 2) % 2 < 1:
+            pg.draw.line(self.screen, "white",
+                (x + ip_text.get_width(), y + ip_text.get_height() // 6),
+                (x + ip_text.get_width(), y + ip_text.get_height() * 5 // 6),
+            )
+
+        if self.ready:
+            loading_str = f"Waiting for opponent{'.' * (int(time.time() * 2) % 4)}"
+            loading_text = self.font.render(loading_str, True, "white")
+            self.screen.blit(loading_text, (
+                self.width // 2 - loading_text.get_width() // 2,
+                self.height * 5 // 8 - loading_text.get_height() // 2
+            ))
 
 
     def load_assets(self):
         self.bg_img = pg.image.load("assets/bg.jpg")
+        self.bg_img.fill((192, 160, 128), (0, 0, *self.bg_img.get_size()), pg.BLEND_MULT)
         self.board_img = pg.image.load("assets/board.png")
         self.light_img = pg.image.load("assets/light.svg")
         self.dark_img = pg.image.load("assets/dark.svg")
@@ -34,7 +46,6 @@ class Draw:
 
 
     def render_score(self):
-        self.bg_img.fill((192, 160, 128), (0, 0, *self.bg_img.get_size()), pg.BLEND_MULT)
         score_text = self.font.render("Score", True, "white")
         self.score_pos = (
             self.width // 2 - score_text.get_width() // 2,
