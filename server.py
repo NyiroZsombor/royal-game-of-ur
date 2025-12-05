@@ -1,4 +1,5 @@
 # import time
+import sys
 import socket
 from consts import *
 from random import randint
@@ -30,8 +31,21 @@ def main_loop(clients):
         close_conn(clients)
         return True
     
-    board = b"77000000000000003033030000000"
-    # board = b"77000000000000003033030000020"
+    if "--debug" in sys.argv:
+        board = (b"0143"
+        b"100"
+        b"010"
+        b"000"
+        b"010"
+        b"303"
+        b"313"
+        b"100"
+        b"012"
+        b"0")
+        # board = b"77000000000000003033030000000"
+    else:
+        board = b"77000000000000003033030000000"
+    
     curr_client_idx = randint(0, n_sockets - 1)
     other_client_idx = (curr_client_idx + 1) % n_sockets
     
@@ -58,8 +72,9 @@ def main_loop(clients):
             curr_client.send(rolls)
             other_client.send(rolls)
 
-            msg = curr_client.recv(1024).strip().split()
-            if except_msg(b"<move>", msg[0]): raise BrokenPipeError
+            msg = curr_client.recv(1024).strip()
+            if except_msg(b"<move>", msg): raise BrokenPipeError
+            msg = msg.split()
             double_move = msg[0].split(b"|")[1][-1] == ord("1")
             board = msg[0].split(b"|")[1][:-1]
 
@@ -78,13 +93,23 @@ def main_loop(clients):
 n_sockets = 2
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-    try:
-        server.bind(("0.0.0.0", PORTS[0]))
+    for i in range(50):
+        curr_port = PORTS[0] + i // 2
+        try:
+            server.bind(("0.0.0.0", curr_port))
+        except OSError:
+            curr_port = PORTS[1] + i // 2
+            server.bind(("0.0.0.0", curr_port))
+        except OSError:
+            continue
+        break
+    else:
+        print("all ports are in use")
+    
 
-    except OSError:
-        server.bind(("0.0.0.0", PORTS[1]))
-
-    print(f"server is listening on ip {get_ip()}")
+    print(f"server is listening on ip {get_ip()}:{curr_port}")
+    if "--debug" in sys.argv:
+        print("[!] server is running in debug mode")
 
     server.listen(n_sockets)
     clients = []

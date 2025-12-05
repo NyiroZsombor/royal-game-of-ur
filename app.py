@@ -32,6 +32,8 @@ class App(Draw, Client):
         # self.render_bg()
         # self.draw_board()
 
+        self.start()
+
 
     def post_init(self):
         self.render_bg()
@@ -88,13 +90,6 @@ class App(Draw, Client):
         )
 
 
-    def start_client(self):
-        threading.Thread(
-            target=self.init_client,
-            daemon=True,
-        ).start()
-
-
     def get_next_steps(self, start_square=None):
         nsteps = sum(self.dice)
 
@@ -146,7 +141,10 @@ class App(Draw, Client):
         if move != -1:
             if self.board[steps[0]] != self.color: return False
         if self.board[steps[-1]] == self.color: return False
-        elif move == -1: return True
+        elif move == -1:
+            if self.color == LIGHT and self.light_pieces > 0: return True
+            if self.color == DARK and self.dark_pieces > 0: return True
+            return False
         if steps[-1] == 10 and self.board[10] != EMPTY: return False
 
         if steps[0] <= 16: return True
@@ -265,6 +263,7 @@ class App(Draw, Client):
     def connect_loop(self):
         deleting = -1
         deleting_time = 0.33
+        
         while not self.connected and self.running:
             while True:
                 try:
@@ -279,8 +278,13 @@ class App(Draw, Client):
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_BACKSPACE and len(self.input_host) > 0:
                         deleting = 0
+
                     elif event.key == pg.K_RETURN and not self.ready:
-                        self.start_client()
+                        threading.Thread(
+                            target=self.init_client,
+                            daemon=True,
+                        ).start()
+
                     elif len(self.input_host) < 16 and event.unicode in "0123456789.":
                         self.input_host.append(event.unicode)
                         print("".join(self.input_host))
@@ -327,4 +331,4 @@ class App(Draw, Client):
 
 
 if __name__ ==  "__main__":
-    App().start()
+    App()
