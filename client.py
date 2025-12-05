@@ -28,14 +28,20 @@ class Client:
         print(f"connecting to {host}...")
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-            try:
-                client.connect((host, PORTS[0]))
-            except OSError:
-                client.connect((host, PORTS[1]))
-            except OSError:
-                print("all ports in use")
+            for i in range(50):
+                curr_port = PORTS[0] + i // 2
+                try:
+                    client.connect((host, curr_port))
+                except OSError:
+                    curr_port = PORTS[1] + i // 2
+                    client.connect((host, curr_port))
+                except OSError:
+                    continue
+                break
+            else:
+                print("all ports are in use")
                 self.running = False
-                return
+
             with open("local_ip.txt", "w") as file:
                 file.write(host)
 

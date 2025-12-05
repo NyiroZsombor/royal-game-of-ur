@@ -69,7 +69,7 @@ class App(Draw, Client):
     def init_rects(self):
         self.board_rect = (
             int(self.size[0] / 2 - self.board_surf.get_width() / 2),
-            int(self.size[1] / 2 - self.board_surf.get_height() / 2 + self.tile_size),
+            int(self.size[1] / 2 - self.board_surf.get_height() / 2 + self.tile_size // 2),
             self.tile_size * 3, self.tile_size * 8
         )
         self.light_piece_rect = (
@@ -225,10 +225,19 @@ class App(Draw, Client):
                     piece_mouse = collide_rect_point(self.dark_piece_rect, event.pos)
                 
                 if board_mouse and self.my_turn and self.has_rolled:
-                    self.move = (
+                    move = (
                         int((event.pos[0] - self.board_rect[0]) / self.tile_size) +
                         int((event.pos[1] - self.board_rect[1]) / self.tile_size) * 3
                     )
+                    move_made = False
+
+                    if self.move is not None:
+                        steps = self.get_next_steps()
+                        if move == steps[-1]:
+                            move_made = True
+                            self.make_move()
+                    if not move_made:
+                        self.move = move
 
                 elif dice_mouse and self.my_turn and not self.has_rolled:
                     self.send_queue.put(b"<roll>")
@@ -323,8 +332,6 @@ class App(Draw, Client):
             self.draw_board()
             self.screen.blit(self.board_surf, self.board_rect)
             self.draw_ui()
-            self.draw_areas()
-
 
             pg.display.flip()
             self.clock.tick(self.fps)

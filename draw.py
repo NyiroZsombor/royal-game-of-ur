@@ -32,15 +32,17 @@ class Draw:
         self.board_img = pg.image.load("assets/board.png")
         self.light_img = pg.image.load("assets/light.svg")
         self.dark_img = pg.image.load("assets/dark.svg")
-        self.arrows = pg.image.load("assets/arrows.png")
+        self.waiting_img = pg.image.load("assets/waiting.svg")
+        self.arrow_imgs = pg.image.load("assets/arrows.png")
         self.move_sound = pg.mixer.Sound("assets/move.wav")
         self.roll_sound = pg.mixer.Sound("assets/roll.wav")
 
-        self.bg_img.convert()
-        self.board_img.convert_alpha()
-        self.light_img.convert_alpha()
-        self.dark_img.convert_alpha()
-        self.arrows.convert_alpha()
+        self.bg_img = self.bg_img.convert()
+        self.board_img = self.board_img.convert_alpha()
+        self.light_img = self.light_img.convert_alpha()
+        self.dark_img = self.dark_img.convert_alpha()
+        self.waiting_img = self.waiting_img.convert_alpha()
+        self.arrow_imgs = self.arrow_imgs.convert_alpha()
         self.move_sound.set_volume(0.5)
         self.roll_sound.set_volume(0.5)
 
@@ -64,6 +66,7 @@ class Draw:
         self.opponent_text = self.font.render("Them", True, "white")
 
         color = 0x88FF22
+        # color = 0xFF3311
 
         self.highlight_you_text = self.you_text.copy()
         self.highlight_opponent_text = self.opponent_text.copy()
@@ -79,7 +82,7 @@ class Draw:
         you_size = self.you_text.get_size()
         opponent_size = self.opponent_text.get_size()
 
-        center = (self.width // 6, self.tile_size * 2)
+        center = (self.width // 6, self.tile_size * 2 // 3)
 
         self.you_pos = (
             center[0] - you_size[0] // 2,
@@ -112,6 +115,32 @@ class Draw:
             self.finish_rect[0] + self.finish_rect[2] // 2 - finish_text.get_width() // 2,
             self.finish_rect[1] + self.finish_rect[3] // 2 - finish_text.get_height() // 2
         )
+
+        bg_color = 0xA89039
+        border_color = 0x84810D
+        padding = 6
+        light_piece_rect = (
+            self.light_piece_rect[0] - padding,
+            self.light_piece_rect[1] - padding,
+            self.light_piece_rect[2] + padding * 2,
+            self.light_piece_rect[3] + padding * 2
+        )
+        dark_piece_rect = (
+            self.dark_piece_rect[0] - padding,
+            self.dark_piece_rect[1] - padding,
+            self.dark_piece_rect[2] + padding * 2,
+            self.dark_piece_rect[3] + padding * 2
+        )
+        pg.draw.rect(self.bg_img, bg_color, self.dice_rect)
+        pg.draw.rect(self.bg_img, bg_color, light_piece_rect)
+        pg.draw.rect(self.bg_img, bg_color, dark_piece_rect)
+        pg.draw.rect(self.bg_img, bg_color, self.finish_rect)
+
+        pg.draw.rect(self.bg_img, border_color, self.dice_rect, 2)
+        pg.draw.rect(self.bg_img, border_color, light_piece_rect, 2)
+        pg.draw.rect(self.bg_img, border_color, dark_piece_rect, 2)
+        pg.draw.rect(self.bg_img, border_color, self.finish_rect, 2)
+
         self.bg_img.blit(finish_text, finish_pos)
 
 
@@ -181,7 +210,7 @@ class Draw:
             dx = arrow_types.index(arrow_type) * self.tile_size
             dy = directions.index(d) * self.tile_size
 
-            self.screen.blit(self.arrows, (x, y), (dx, dy, self.tile_size, self.tile_size))
+            self.screen.blit(self.arrow_imgs, (x, y), (dx, dy, self.tile_size, self.tile_size))
 
 
     def draw_die(self, x, y, lights: set):
@@ -251,24 +280,23 @@ class Draw:
             self.score_pos[1]
         ))
 
-        if int(time.time() * 2) & 1:
-            if self.my_turn:
+        if self.my_turn:
+            if int(time.time() * 2) & 1:
                 self.screen.blit(
                     self.highlight_you_text,
                     self.you_pos,
                 )
-            else:
-                self.screen.blit(
-                    self.highlight_opponent_text,
-                    self.opponent_pos,
-                )
+        else:
+            angle = -int(time.monotonic() * 8 % 8) / 8 * 360
+            text_size = self.opponent_text.get_size()
+            img = pg.transform.rotate(self.waiting_img, angle)
+            x = self.opponent_pos[0] + text_size[0] // 2 - img.get_width() // 2
+            y = self.opponent_pos[1] + text_size[1] * 3 // 2 - img.get_height() // 2
+            self.screen.blit(img, (x, y))
 
         self.draw_dice()
         self.draw_move()
 
 
     def draw_areas(self):
-        pg.draw.rect(self.screen, "red", self.dice_rect, 2)
-        pg.draw.rect(self.screen, "red", self.light_piece_rect, 2)
-        pg.draw.rect(self.screen, "red", self.dark_piece_rect, 2)
-        pg.draw.rect(self.screen, "red", self.finish_rect, 2)
+        ...
