@@ -82,15 +82,15 @@ class Draw:
         you_size = self.you_text.get_size()
         opponent_size = self.opponent_text.get_size()
 
-        center = (self.width // 6, self.tile_size * 2 // 3)
+        center = (self.width // 6, self.height - self.tile_size * 3)
 
         self.you_pos = (
             center[0] - you_size[0] // 2,
-            self.height - center[1] - you_size[1] // 2
+            center[1] - you_size[1] // 2
         )
         self.opponent_pos = (
             self.width - center[0] - opponent_size[0] // 2,
-            self.height - center[1] - opponent_size[1] // 2
+            center[1] - opponent_size[1] // 2
         )
 
         if self.color == DARK:
@@ -290,13 +290,9 @@ class Draw:
             angle = -int(time.monotonic() * 8 % 8) / 8 * 360
             text_size = self.opponent_text.get_size()
             img = pg.transform.rotate(self.waiting_img, angle)
-            x = self.opponent_pos[0] + text_size[0] // 2 - img.get_width() // 2
+            x = self.opponent_pos[0] + text_size[0] // 2 - img.get_width() / 2
             y = self.opponent_pos[1] + text_size[1] * 3 // 2 - img.get_height() // 2
             self.screen.blit(img, (x, y))
 
         self.draw_dice()
         self.draw_move()
-
-
-    def draw_areas(self):
-        ...
