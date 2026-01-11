@@ -15,7 +15,7 @@ class Client:
             prev_ip = file.read()
 
         while True:
-            host = "".join(self.input_host)
+            host = "".join(self.input_host or prev_ip)
 
             try:
                 self.start_conn(host)
@@ -33,10 +33,11 @@ class Client:
                 try:
                     client.connect((host, curr_port))
                 except OSError:
-                    curr_port = PORTS[1] + i // 2
-                    client.connect((host, curr_port))
-                except OSError:
-                    continue
+                    try:
+                        curr_port = PORTS[1] + i // 2
+                        client.connect((host, curr_port))
+                    except OSError:
+                        continue
                 break
             else:
                 print("all ports are in use")
@@ -45,26 +46,26 @@ class Client:
             with open("local_ip.txt", "w") as file:
                 file.write(host)
 
-            receive_thread =  threading.Thread(
-                target=self.receive,
+            recv_thread =  threading.Thread(
+                target=self.handle_recv,
                 daemon=True,
                 args=(client,)
             )
             send_thread = threading.Thread(
-                target=self.send,
+                target=self.handle_send,
                 daemon=True,
                 args=(client,)
             )
 
             send_thread.start()
-            receive_thread.start()
+            recv_thread.start()
             self.ready = True
             send_thread.join()
-            receive_thread.join()
+            recv_thread.join()
             client.send(b"<exit>")
 
 
-    def send(self, client):
+    def handle_send(self, client):
         while True:
             msg = self.send_queue.get()
             if msg:
@@ -72,7 +73,7 @@ class Client:
                 print("<", msg)
 
 
-    def receive(self, client):
+    def handle_recv(self, client):
         while True:
             msg = client.recv(1024)
             if msg:
@@ -86,6 +87,19 @@ class Client:
 
     def handle_message(self, msg):
         print("#", msg)
+
+        # if msg.startswith(b"<board>"):
+        #     self.decode_board(msg)
+        #     self.move_sound.play()
+
+        # elif msg.startswith(b"<your-turn>"):
+        #     self.my_turn = True
+        #     self.selected_tile = None
+        #     self.has_rolled = False
+        #     self.move = None
+
+        # elif msg.startswith(b"<opponents-turn>"):
+        #     self.my_turn = False
 
         if msg.startswith(b"<move>"):
             if not self.my_turn:
@@ -116,7 +130,8 @@ class Client:
             self.roll_sound.play()
 
         else:
-            print("???")
+            print("unrecognized message type")
+            raise ValueError()
 
 
     def decode_board(self, board):
@@ -127,8 +142,6 @@ class Client:
         self.light_score = decoded[2]
         self.dark_score = decoded[3]
         self.board = decoded[4:-1]
-
-        return decoded[-1] == 1
 
 
     def encode_board(self):

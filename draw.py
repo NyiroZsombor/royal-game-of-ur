@@ -3,7 +3,6 @@ import time
 import pygame as pg
 from consts import *
 
-
 class Draw:
 
     def draw_loading(self):
@@ -55,9 +54,9 @@ class Draw:
         )
 
         rect = (0, self.score_pos[1], self.width, score_text.get_height())
-        dark = pg.surface.Surface(rect[2:4])
-        dark.fill((128, 128, 128))
-        self.bg_img.blit(dark, rect[0:2], special_flags=pg.BLEND_MULT)
+        self.shade_bg = pg.surface.Surface(rect[2:4])
+        self.shade_bg.fill((128, 128, 128))
+        self.bg_img.blit(self.shade_bg, rect[0:2], special_flags=pg.BLEND_MULT)
         self.bg_img.blit(score_text, self.score_pos)
 
 
@@ -296,3 +295,20 @@ class Draw:
 
         self.draw_dice()
         self.draw_move()
+
+
+    def draw_winning(self):
+        if self.winning_color == self.color:
+            text = "You won! :)"
+        elif self.winning_color is not None:
+            text = "You lost! :("
+        else:
+            return
+        surf = self.font.render(text, True, "white")
+        text_pos = (
+            self.width // 2 - surf.get_width() // 2,
+            self.height // 2 - surf.get_height() // 2
+        )
+        self.screen.blit(self.shade_bg, (0, text_pos[1]), special_flags=pg.BLEND_MULT)
+        self.screen.blit(surf, text_pos)
+

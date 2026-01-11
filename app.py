@@ -1,8 +1,8 @@
 import queue
 import threading
 import pygame as pg
-from draw import *
-from client import *
+from draw import Draw
+from client import Client
 from consts import *
 
 class App(Draw, Client):
@@ -57,6 +57,7 @@ class App(Draw, Client):
         self.selected_tile = None
         self.has_rolled = True
         self.move = None
+        self.winning_color = None
 
         self.tile_size = 64
         self.piece_spacing_factor = 0.75
@@ -209,6 +210,11 @@ class App(Draw, Client):
                 rect[0] < point[0] < rect[0] + rect[2] and 
                 rect[1] < point[1] < rect[1] + rect[3] 
             )
+
+        if self.winning_color is not None:
+            if event.type == pg.QUIT:
+                self.running = False
+            return
         
         match event.type:
             case pg.QUIT:
@@ -316,26 +322,31 @@ class App(Draw, Client):
             self.clock.tick(self.fps)
 
 
+    def check_win(self):
+        if self.light_score == 7: self.winning_color = LIGHT
+        elif self.dark_score == 7: self.winning_color = DARK
+
+
     def game_loop(self):
         while self.running:
             while True:
                 try:
-                    self.handle_message(self.recv_queue.get(False))
+                    self.handle_message(self.recv_queue.get(block=False))
                 except queue.Empty:
                     break
-
-            self.screen.blit(self.bg_img, (0, 0))
             
             for event in pg.event.get():
                 self.handle_event(event)
 
+            self.check_win()
+
+            self.screen.blit(self.bg_img, (0, 0))
+
             self.draw_board()
             self.screen.blit(self.board_surf, self.board_rect)
             self.draw_ui()
+            self.draw_winning()
 
             pg.display.flip()
             self.clock.tick(self.fps)
 
-
-if __name__ ==  "__main__":
-    App()
