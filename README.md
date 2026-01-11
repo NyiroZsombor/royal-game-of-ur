@@ -2,12 +2,12 @@
 
 Run `server.py` on the host computer:
 ```bash
-python server.py
+./server.py
 ```
 
-Run `app.py` (or `client.py`) on two client computer (usually the server computer is also a client):
+Run `main.py` on two client computer
 ```bash
-python app.py
+./main.py
 ```
 Then enter the ip of the host computer, displayed in the server terminal.
 
